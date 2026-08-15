@@ -1,0 +1,9 @@
+.composer-cache/
+.tmp/
+node_modules/
+vendor/
+.env
+.nuxt/
+.output/
+.DS_Store
+Thumbs.db
