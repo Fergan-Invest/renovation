@@ -3,9 +3,9 @@
     <NuxtRouteAnnouncer />
 
     <form class="login-card" @submit.prevent="login">
-      <div class="brand-mark">FI</div>
+      <div class="brand-mark">FV</div>
       <div>
-        <p class="login-kicker">Farg'ona Invest GIS</p>
+        <p class="login-kicker">Farg'ona viloyati axborot tizimi</p>
         <h1>Tizimga kirish</h1>
       </div>
 
@@ -29,18 +29,18 @@
 
     <header class="topbar">
       <div class="brand">
-        <div class="brand-mark">FI</div>
+        <div class="brand-mark">FV</div>
         <div>
-          <strong>Fargona Invest GIS</strong>
-          <span>Hududiy xarita va jadval ma'lumotlari</span>
+          <strong>Renovatsiya hududlari</strong>
+          <span>Farg'ona viloyati ma'lumotlar bazasi</span>
         </div>
       </div>
 
       <nav class="nav-links" aria-label="Asosiy bo'limlar">
-        <button>Bosh sahifa</button>
-        <button>Loyiha haqida</button>
-        <button class="active">Interaktiv xarita</button>
-        <button>Fayllar</button>
+        <button>Asosiy</button>
+        <button>Hududlar</button>
+        <button class="active">Xarita</button>
+        <button>Ma'lumotlar</button>
       </nav>
 
       <div class="top-actions">
@@ -50,23 +50,44 @@
       </div>
     </header>
 
-    <main class="map-layout">
+    <main :class="['map-layout', { 'inspector-open': inspectorOpen }]">
       <aside class="side-rail" aria-label="Xarita qisqa boshqaruvlari">
-        <button class="rail-button active" title="Xarita">Xarita</button>
-        <button class="rail-button" title="Fayllar" @click="filesOpen = !filesOpen">Fayl</button>
-        <button class="rail-button" title="Filtr" @click="filterOpen = !filterOpen">Filtr</button>
-        <button class="rail-button" title="Butun hudud" @click="fitToData">Hudud</button>
+        <div class="rail-nav">
+          <button class="rail-button active" title="Xarita">
+            <span class="rail-icon">⌁</span><span>Xarita</span>
+          </button>
+          <button class="rail-button" title="Fayllar" @click="filesOpen = !filesOpen">
+            <span class="rail-icon">▱</span><span>Fayllar</span>
+          </button>
+          <button class="rail-button" title="Filtr" @click="filterOpen = !filterOpen">
+            <span class="rail-icon">≡</span><span>Filtr</span>
+          </button>
+          <button class="rail-button" title="Butun hudud" @click="fitToData">
+            <span class="rail-icon">◎</span><span>Hudud</span>
+          </button>
+        </div>
+        <span class="rail-status" title="Tizim ishlamoqda"></span>
       </aside>
 
       <section class="map-stage">
-        <div class="map-controls left">
-          <button title="Fayllar" @click="filesOpen = !filesOpen">{{ filesOpen ? 'Fayllarni yopish' : 'Fayllarni ochish' }}</button>
-          <button title="Butun hudud" @click="fitToData">Butun hudud</button>
-        </div>
-
-        <div class="map-controls right">
-          <button title="Kattalashtirish" @click="zoomBy(1)">+</button>
-          <button title="Kichraytirish" @click="zoomBy(-1)">-</button>
+        <div class="map-toolbar">
+          <div class="toolbar-actions">
+            <button title="Fayllar" @click="filesOpen = !filesOpen">{{ filesOpen ? 'Fayllarni yopish' : 'Fayllar' }}</button>
+            <button title="Butun hudud" @click="fitToData">Hududga qaytish</button>
+          </div>
+          <div class="map-type-control" aria-label="Xarita turi">
+            <span>Xarita turi</span>
+            <button
+              v-for="type in mapTypes"
+              :key="type.value"
+              :class="{ active: mapType === type.value }"
+              @click="setMapType(type.value)"
+            >{{ type.label }}</button>
+          </div>
+          <div class="zoom-control">
+            <button title="Kattalashtirish" @click="zoomBy(1)">+</button>
+            <button title="Kichraytirish" @click="zoomBy(-1)">−</button>
+          </div>
         </div>
 
         <div class="filter-card">
@@ -97,20 +118,24 @@
         <div ref="mapElement" class="map"></div>
 
         <div class="summary-card">
-          <div class="summary-row">
-            <span class="dot green"></span>
-            <p>Xarita obyekti</p>
-            <strong>{{ summary.feature_count }}</strong>
+          <div class="summary-heading">
+            <div>
+              <span>Ma'lumotlar holati</span>
+              <strong>{{ summary.file_count }}</strong>
+            </div>
+            <span class="live-badge">Faol</span>
           </div>
-          <div class="summary-row">
-            <span class="dot blue"></span>
-            <p>Jadval fayli</p>
-            <strong>{{ summary.excel_count }}</strong>
-          </div>
-          <div class="summary-row">
-            <span class="dot yellow"></span>
-            <p>Jami fayl</p>
-            <strong>{{ summary.file_count }}</strong>
+          <div class="summary-metrics">
+            <div class="summary-row green">
+              <span class="metric-icon">◇</span>
+              <p>Xarita obyektlari</p>
+              <strong>{{ summary.feature_count }}</strong>
+            </div>
+            <div class="summary-row blue">
+              <span class="metric-icon">▤</span>
+              <p>Jadval fayllari</p>
+              <strong>{{ summary.excel_count }}</strong>
+            </div>
           </div>
         </div>
 
@@ -149,10 +174,13 @@
         </div>
       </section>
 
-      <aside class="inspector-panel">
+      <aside v-if="inspectorOpen" class="inspector-panel">
         <section class="selected-card">
           <div class="panel-title">
-            <p>Tanlangan obyekt</p>
+            <div class="panel-heading">
+              <p>Hudud tafsilotlari</p>
+              <button aria-label="Tafsilotlarni yopish" @click="closeInspector">×</button>
+            </div>
             <strong>{{ selectedFeature.name }}</strong>
           </div>
 
@@ -209,6 +237,7 @@ import { getCenter } from 'ol/extent'
 import { fromLonLat } from 'ol/proj'
 import OSM from 'ol/source/OSM'
 import VectorSource from 'ol/source/Vector'
+import XYZ from 'ol/source/XYZ'
 import { Circle as CircleStyle, Fill, Stroke, Style, Text } from 'ol/style'
 import { computed, nextTick, onMounted, ref } from 'vue'
 
@@ -245,6 +274,30 @@ const authToken = ref('')
 const driveFiles = ref<DriveFile[]>([])
 const filterOpen = ref(true)
 const filesOpen = ref(false)
+const inspectorOpen = ref(false)
+const mapType = ref<'standard' | 'satellite' | 'topographic'>('standard')
+const mapTypes = [
+  { value: 'standard' as const, label: 'Standart' },
+  { value: 'satellite' as const, label: "Sun'iy yo'ldosh" },
+  { value: 'topographic' as const, label: 'Topografik' }
+]
+const baseLayers = {
+  standard: new TileLayer({ source: new OSM() }),
+  satellite: new TileLayer({
+    source: new XYZ({
+      url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+      attributions: 'Tiles © Esri'
+    }),
+    visible: false
+  }),
+  topographic: new TileLayer({
+    source: new XYZ({
+      url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}',
+      attributions: 'Tiles © Esri'
+    }),
+    visible: false
+  })
+}
 const summary = ref({
   file_count: 0,
   feature_count: 0,
@@ -334,9 +387,6 @@ async function loadDriveImports() {
   applyDistrictFilter()
   fitToData()
 
-  if (features[0]) {
-    setSelectedFromMapFeature(features[0])
-  }
 }
 
 function applyDistrictFilter() {
@@ -353,13 +403,23 @@ function setSelectedFromMapFeature(feature: import('ol/Feature').default) {
     district: String(feature.get('district') || '-'),
     geometry_type: feature.getGeometry()?.getType() || '-'
   }
+  inspectorOpen.value = true
+  nextTick(() => {
+    map.value?.updateSize()
+    fitToData()
+  })
+}
+
+function closeInspector() {
+  inspectorOpen.value = false
+  nextTick(() => map.value?.updateSize())
 }
 
 function fitToData() {
   if (!map.value || vectorSource.isEmpty()) return
 
   map.value.getView().fit(vectorSource.getExtent(), {
-    padding: [60, 380, 80, 80],
+    padding: inspectorOpen.value ? [60, 380, 80, 80] : [60, 80, 80, 80],
     maxZoom: 17,
     duration: 250
   })
@@ -369,6 +429,11 @@ function zoomBy(delta: number) {
   const view = map.value?.getView()
   if (!view) return
   view.animate({ zoom: (view.getZoom() || 10) + delta, duration: 150 })
+}
+
+function setMapType(type: 'standard' | 'satellite' | 'topographic') {
+  mapType.value = type
+  Object.entries(baseLayers).forEach(([name, layer]) => layer.setVisible(name === type))
 }
 
 async function initializeMap() {
@@ -386,9 +451,9 @@ async function initializeMap() {
   map.value = new Map({
     target: mapElement.value,
     layers: [
-      new TileLayer({
-        source: new OSM()
-      }),
+      baseLayers.standard,
+      baseLayers.satellite,
+      baseLayers.topographic,
       vectorLayer
     ],
     view: new View({
@@ -643,36 +708,102 @@ button {
 
 .map-layout {
   display: grid;
-  grid-template-columns: 76px minmax(0, 1fr) 382px;
+  grid-template-columns: 96px minmax(0, 1fr);
   height: calc(100vh - 88px);
   min-height: 680px;
 }
 
+.map-layout.inspector-open {
+  grid-template-columns: 96px minmax(0, 1fr) 382px;
+}
+
 .side-rail {
+  position: relative;
+  z-index: 8;
   display: flex;
   flex-direction: column;
-  gap: 10px;
   align-items: center;
-  padding: 18px 10px;
-  border-right: 1px solid #dde5e1;
-  background: #0f1f1a;
+  justify-content: space-between;
+  padding: 18px 10px 22px;
+  border-right: 1px solid rgba(255, 255, 255, 0.08);
+  background:
+    radial-gradient(circle at 50% 0, rgba(91, 226, 155, 0.18), transparent 28%),
+    linear-gradient(180deg, #102a22 0%, #091a15 100%);
+  box-shadow: 12px 0 30px rgba(9, 26, 21, 0.14);
+}
+
+.rail-monogram {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border: 1px solid rgba(121, 239, 176, 0.3);
+  border-radius: 14px;
+  color: #8af0b9;
+  background: rgba(255, 255, 255, 0.07);
+  font-size: 13px;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+}
+
+.rail-nav {
+  display: grid;
+  gap: 10px;
+  width: 100%;
 }
 
 .rail-button {
-  width: 56px;
-  min-height: 48px;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: 8px;
-  color: #d7ebe2;
-  background: rgba(255, 255, 255, 0.06);
-  font-size: 11px;
+  position: relative;
+  display: grid;
+  place-items: center;
+  gap: 4px;
+  width: 100%;
+  min-height: 66px;
+  padding: 8px 4px;
+  border: 1px solid transparent;
+  border-radius: 16px;
+  color: #b7cdc4;
+  background: transparent;
+  font-size: 10px;
   font-weight: 800;
+  transition: transform 160ms ease, color 160ms ease, background 160ms ease;
 }
 
-.rail-button.active,
 .rail-button:hover {
-  color: #102019;
-  background: #61df9a;
+  transform: translateY(-2px);
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.07);
+}
+
+.rail-button.active {
+  color: #092117;
+  background: linear-gradient(145deg, #7beaae, #43ce86);
+  box-shadow: 0 12px 26px rgba(67, 206, 134, 0.28);
+}
+
+.rail-button.active::before {
+  position: absolute;
+  left: -11px;
+  width: 3px;
+  height: 30px;
+  border-radius: 0 6px 6px 0;
+  background: #8af0b9;
+  content: '';
+}
+
+.rail-icon {
+  font-size: 24px;
+  font-weight: 500;
+  line-height: 1;
+}
+
+.rail-status {
+  width: 9px;
+  height: 9px;
+  border: 2px solid #193b30;
+  border-radius: 50%;
+  background: #62e69f;
+  box-shadow: 0 0 0 5px rgba(98, 230, 159, 0.1), 0 0 16px #62e69f;
 }
 
 .inspector-panel {
@@ -702,6 +833,26 @@ button {
   margin: 0 0 8px;
   color: #88918d;
   font-size: 13px;
+}
+
+.panel-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.panel-heading button {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border: 0;
+  border-radius: 50%;
+  color: #33413b;
+  background: #edf5f1;
+  font-size: 24px;
+  line-height: 1;
 }
 
 .panel-title strong {
@@ -953,44 +1104,98 @@ button {
 .summary-card {
   right: 18px;
   top: 76px;
-  width: 214px;
+  width: 286px;
   overflow: hidden;
-  opacity: 0.94;
+  padding: 18px;
+  border: 1px solid rgba(255, 255, 255, 0.7);
+  background: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(18px);
+}
+
+.summary-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding-bottom: 15px;
+  border-bottom: 1px solid #e8efeb;
+}
+
+.summary-heading div {
+  display: grid;
+  gap: 5px;
+}
+
+.summary-heading span {
+  color: #84928c;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.summary-heading strong {
+  font-size: 30px;
+  line-height: 1;
+}
+
+.summary-heading .live-badge {
+  padding: 6px 9px;
+  border-radius: 999px;
+  color: #16834c;
+  background: #dcf8e9;
+  font-size: 10px;
+}
+
+.summary-metrics {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  padding-top: 14px;
 }
 
 .summary-row {
   display: grid;
-  grid-template-columns: 16px minmax(0, 1fr) 42px;
-  align-items: center;
-  gap: 10px;
-  padding: 10px 14px;
-  font-size: 13px;
+  grid-template-columns: 34px minmax(0, 1fr);
+  gap: 7px 8px;
+  padding: 11px;
+  border-radius: 12px;
+  background: #f5f8f6;
 }
 
 .summary-row p {
+  align-self: center;
   margin: 0;
+  color: #63716b;
+  font-size: 10px;
+  font-weight: 700;
 }
 
 .summary-row strong {
-  text-align: right;
+  grid-column: 2;
+  font-size: 20px;
+  line-height: 1;
 }
 
-.dot {
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
+.metric-icon {
+  display: grid;
+  grid-row: 1 / span 2;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  font-size: 18px;
+  font-weight: 900;
 }
 
-.dot.green {
-  background: #16a34a;
+.summary-row.green .metric-icon {
+  color: #16834c;
+  background: #dcf8e9;
 }
 
-.dot.blue {
-  background: #2563eb;
-}
-
-.dot.yellow {
-  background: #f59e0b;
+.summary-row.blue .metric-icon {
+  color: #2563eb;
+  background: #e5edff;
 }
 
 .file-dock {
@@ -1052,6 +1257,284 @@ button {
   grid-column: 2;
 }
 
+/* Institutional interface */
+body {
+  font-family: "Segoe UI Variable", "Noto Sans", "Segoe UI", Arial, sans-serif;
+  font-size: 15px;
+  letter-spacing: -0.01em;
+}
+
+.topbar {
+  grid-template-columns: minmax(320px, 1fr) auto auto;
+  min-height: 76px;
+  padding: 0 30px;
+  border-top: 3px solid #176b5b;
+  border-bottom-color: #dfe6e3;
+}
+
+.brand-mark {
+  width: 42px;
+  height: 42px;
+  border-radius: 4px;
+  background: #176b5b;
+  font-size: 14px;
+  letter-spacing: 0.04em;
+}
+
+.brand strong {
+  color: #17211e;
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.brand span {
+  color: #66736e;
+  font-size: 12px;
+}
+
+.nav-links {
+  gap: 8px;
+}
+
+.nav-links button {
+  padding: 12px 14px;
+  border-radius: 4px;
+  color: #394641;
+  font-size: 12px;
+  font-weight: 650;
+  letter-spacing: 0.02em;
+  text-transform: none;
+}
+
+.nav-links .active {
+  color: #125f51;
+  background: #e8f2ef;
+}
+
+.top-actions button {
+  border: 1px solid #dbe5e1;
+  border-radius: 4px;
+  background: #f5f8f7;
+  font-size: 12px;
+}
+
+.map-layout,
+.map-layout.inspector-open {
+  grid-template-columns: 76px minmax(0, 1fr);
+  height: calc(100vh - 76px);
+}
+
+.map-layout.inspector-open {
+  grid-template-columns: 76px minmax(0, 1fr) 382px;
+}
+
+.side-rail {
+  padding: 14px 8px 20px;
+  border-right: 1px solid #163d36;
+  background: #0f3029;
+  box-shadow: none;
+}
+
+.rail-nav {
+  margin-top: 8px;
+  gap: 6px;
+}
+
+.rail-button {
+  min-height: 58px;
+  border-radius: 4px;
+  color: #bbccc7;
+  font-size: 10px;
+  transition: background 120ms ease, color 120ms ease;
+}
+
+.rail-button:hover {
+  transform: none;
+  color: #ffffff;
+  background: #19433a;
+}
+
+.rail-button.active {
+  color: #ffffff;
+  background: #176b5b;
+  box-shadow: none;
+}
+
+.rail-button.active::before {
+  left: -9px;
+  width: 3px;
+  height: 26px;
+  border-radius: 0;
+  background: #ffffff;
+}
+
+.rail-icon {
+  font-size: 20px;
+}
+
+.rail-status {
+  width: 7px;
+  height: 7px;
+  border: 0;
+  background: #7bd2ad;
+  box-shadow: none;
+}
+
+.map-stage {
+  container-type: inline-size;
+}
+
+.map-toolbar {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  left: 14px;
+  z-index: 7;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  pointer-events: none;
+}
+
+.toolbar-actions,
+.map-type-control,
+.zoom-control {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 4px;
+  border: 1px solid rgba(210, 220, 216, 0.95);
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: 0 4px 14px rgba(20, 45, 37, 0.1);
+  pointer-events: auto;
+}
+
+.map-toolbar button {
+  min-height: 34px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 3px;
+  color: #34413d;
+  background: transparent;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.map-toolbar button:hover {
+  background: #edf3f1;
+}
+
+.map-type-control > span {
+  padding: 0 10px 0 7px;
+  color: #75817d;
+  font-size: 11px;
+}
+
+.map-type-control button.active {
+  color: #ffffff;
+  background: #176b5b;
+}
+
+.zoom-control button {
+  width: 36px;
+  padding: 0;
+  font-size: 18px;
+}
+
+.filter-card {
+  top: 76px;
+  left: 14px;
+  width: 270px;
+  border: 1px solid #dbe3e0;
+  border-radius: 6px;
+  box-shadow: 0 6px 20px rgba(20, 45, 37, 0.1);
+}
+
+.filter-toggle {
+  border-radius: 5px;
+  box-shadow: none;
+  font-size: 13px;
+}
+
+.summary-card {
+  top: 76px;
+  right: 14px;
+  width: 270px;
+  padding: 15px;
+  border: 1px solid #dbe3e0;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: 0 6px 20px rgba(20, 45, 37, 0.1);
+  backdrop-filter: none;
+}
+
+.summary-heading strong {
+  font-size: 26px;
+  font-weight: 650;
+}
+
+.summary-heading .live-badge {
+  border-radius: 3px;
+  color: #176b5b;
+  background: #e5f1ed;
+}
+
+.summary-row,
+.metric-icon {
+  border-radius: 4px;
+}
+
+.inspector-panel,
+.selected-card,
+.mini-stats div,
+.source-note,
+.file-dock {
+  box-shadow: none;
+}
+
+.inspector-panel {
+  top: 76px;
+  border-left: 1px solid #dbe3e0;
+  background: #f3f6f5;
+}
+
+@container (max-width: 900px) {
+  .map-type-control > span {
+    display: none;
+  }
+
+  .map-toolbar button {
+    padding: 0 8px;
+  }
+
+  .summary-card {
+    display: none;
+  }
+}
+
+@container (max-width: 650px) {
+  .map-toolbar {
+    flex-wrap: wrap;
+  }
+
+  .map-type-control {
+    order: 3;
+    width: 100%;
+  }
+
+  .map-type-control button {
+    flex: 1;
+  }
+
+  .filter-card {
+    top: 124px;
+  }
+}
+
 @media (max-width: 1180px) {
   .topbar {
     grid-template-columns: 1fr auto;
@@ -1065,9 +1548,13 @@ button {
     grid-template-columns: 64px minmax(0, 1fr);
   }
 
+  .map-layout.inspector-open {
+    grid-template-columns: 64px minmax(0, 1fr);
+  }
+
   .inspector-panel {
     position: fixed;
-    top: 88px;
+    top: 76px;
     right: 0;
     bottom: 0;
     z-index: 10;
