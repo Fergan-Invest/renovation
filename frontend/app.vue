@@ -30,7 +30,7 @@
     <header class="topbar">
       <div class="brand">
         <div class="brand-mark">FV</div>
-        <div>
+        <div> 
           <strong>Renovatsiya hududlari</strong>
           <span>Farg'ona viloyati ma'lumotlar bazasi</span>
         </div>
